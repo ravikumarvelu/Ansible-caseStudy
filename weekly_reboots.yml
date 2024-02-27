@@ -1,0 +1,24 @@
+---
+- name: Weekly system reboot
+  hosts: all
+  become: true 
+  tasks:
+    - name: Install crontab in nodes
+      yum:
+        name: cronie
+        state: present
+        
+    - name: Enable and start the crontab service
+      service:
+        name: crond.service
+        enabled: yes
+        state: started
+
+    - name: Schedule reboot for Sunday evening
+      cron:
+        name: Weekly Reboot
+        job: "/usr/bin/reboot"
+        minute: 0
+        hour: 22
+        weekday: 0
+
