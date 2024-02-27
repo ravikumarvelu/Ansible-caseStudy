@@ -1,0 +1,49 @@
+---
+- name: Enforce security guidelines
+  hosts: all
+  become: true
+  tasks:
+    - name: "Ensure SSH is enabled"
+      service:
+        name: sshd
+        state: started
+        enabled: yes
+
+    - name: Check SSH configuration options
+      command: "grep -E 'PermitRootLogin|PasswordAuthentication|UseDNS' /etc/ssh/sshd_config"
+      register: ssh_config_checks
+
+    - fail:
+        msg: "Errors found in SSH configuration, please review!"
+      when: ssh_config_checks.rc != 0
+
+    - name: Run the command for seLinux status
+      command: "getenforce"
+      register: selinux_status
+
+    - fail:
+        msg: "SELinux is not enabled, consider enforcing it!"
+      when: selinux_status.stdout == "enforcing"
+
+    - name: "Disable root login"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: ^PermitRootLogin
+        line: PermitRootLogin no
+        state: present
+
+    - name: "Copy the security script"
+      copy:
+        src: "/opt/security_check.sh"
+        dest: "/opt/security_check.sh"
+        mode: a+x
+
+    - name: "Run security checks using a security tool"
+      command: "/opt/security_check.sh"
+      register: security_result
+    - debug:
+        msg: "{{ security_result.stdout }}"
+    - fail:
+        msg: "Security checks failed, please address the issues!"
+      when: security_result.rc != 0
+
