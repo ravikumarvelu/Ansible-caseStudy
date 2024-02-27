@@ -1,0 +1,44 @@
+- name: "Enforce desired configuration "
+  hosts: all
+  become: true
+  vars_files:
+    - variables
+  tasks:
+    - name: "Httpd installation"
+      yum:
+        name: "httpd"
+        state: present
+
+    - name: "Create the root folder"
+      file:
+        state: directory
+        dest: "{{ httpd_loc }}"
+
+    - name: "Change the configure file"
+      template:
+        src: "./webserver.j2"
+        dest: "/etc/httpd/conf.d/new_conf.conf"
+      notify: "Restarting the server"
+
+    - name: "Add the content to httpd"
+      copy:
+        content: "<h1> This is the message from server </h1>"
+        dest: "{{ httpd_loc }}/index.html"
+
+    - name: "Starting the httpd server"
+      service:
+        name: "httpd"
+        state: started
+        enabled: yes
+    - name: "Adding Firewall rule port {{ port_no }}"
+      firewalld:
+        port: "{{ port_no }}/tcp"
+        permanent: yes
+        state: enabled
+        immediate: yes
+  handlers:
+    - name: "Restarting the server"
+      service:
+        name: "httpd"
+        state: restarted
+

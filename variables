@@ -1,0 +1,3 @@
+---
+httpd_loc: /var/www/new_html/
+port_no: 8081
